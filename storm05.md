@@ -49,15 +49,16 @@ Storm隔离性好：
 Storm的ack机制：
 - Tuple树
 - 在Storm的一个Topology中，Spout通过SpoutOutputCollector的emit()方法发射一个tuple(源)即消息。而后经过在该Topology中定义的多个Bolt处理时，可能会产生一个或多个新的Tuple。源Tuple和新产生的Tuple便构成了一个Tuple树。当整棵树被处理完成，才算一个Tuple被完全处理，其中任何一个节点Tuple处理失败或超时，则整棵树失败。
+- 关于消息在storm中的超时默认为30秒，具体参看defaults.yaml中的topology.message.timeout.secs: 30的配置。同时，也可以在定义topology时，通过conf.setMessageTimeoutSecs方法指定超时时间。
 - 可靠性指的是Storm保证每个tuple都能被topoloyg完全处理。而且处理的结果要么成功要么失败。出现失败的原因可能有两种：节点处理失败或者处理超时。
 - Storm的Bolt有BasicBolt和RichBolt，在BasicBolt中，BasicOutputCollector在emit数据的时候，会自动和输入的tuple相关联，而在execute方法结束的时候那个输入tuple会被自动的ack(有一定的条件)。
 - 在使用RichBolt时要实现ack，则需要在emit数据的时候，显示指定该数据的源tuple，即collector.emit(oldTuple, newTuple)且需要在execute执行成功后调用源tuple的ack进行ack。
 - 如果可靠性不是那么重要，不太在意在一些失败的情况下损失一些数据，那么可以通过不跟踪这些tuple树来获取更好的性能。
 
 有三种方法可以去掉可靠性：
-- 第一是把Config.TOPOLOGY_ACKERS设置成0. 在这种情况下，storm会在spout发射一个tuple之后马上调用spout的ack方法。也就是说这个tuple树不会被跟踪。
+- 第一是把Config.TOPOLOGY_ACKERS设置成0(conf.put(Config.TOPOLOGY_ACKER_EXECUTORS, 0)). 在这种情况下，storm会在spout发射一个tuple之后马上调用spout的ack方法。也就是说这个tuple树不会被跟踪。
 - 第二是在tuple层面去掉可靠性。可以在发射tuple的时候不指定messageid来达到不跟踪某个特定的spout tuple的目的。
 - 最后一个方法是如果对于一个tuple树里面的某一部分到底成不成功不是很关心，那么可以在发射这些tuple的时候unanchor它们。这样这些tuple就不在tuple树里面，也就不会被跟踪了。
 
 Acker的跟踪算法是Storm的主要突破之一，对任意大的一个Tuple树，它只需要恒定的20字节就可以进行跟踪。<br>
-cker跟踪算法的原理：acker对于每个spout-tuple保存一个ack-val的校验值，它的初始值是0，然后每发射一个Tuple或Ack一个Tuple时，这个Tuple的id就要跟这个校验值异或一下，并且把得到的值更新为ack-val的新值。那么假设每个发射出去的Tuple都被ack了，那么最后ack-val的值就一定是0。Acker就根据ack-val是否为0来判断是否完全处理，如果为0则认为已完全处理。
+Acker跟踪算法的原理：acker对于每个spout-tuple保存一个ack-val的校验值，它的初始值是0，然后每发射一个Tuple或Ack一个Tuple时，这个Tuple的id就要跟这个校验值异或一下，并且把得到的值更新为ack-val的新值。那么假设每个发射出去的Tuple都被ack了，那么最后ack-val的值就一定是0。Acker就根据ack-val是否为0来判断是否完全处理，如果为0则认为已完全处理。
