@@ -70,6 +70,8 @@ public static void main(String[] args) throws Exception {
 }
 ```
 
+Storm：进程、线程常驻运行，数据不进入磁盘，网络传输。<br>
+MapReduce:TB、PB级别数据设计，一次的批处理作业。<br>
 |Storm | MapReduce|
 |------|----------|
 |流式处理|批处理|
@@ -77,5 +79,10 @@ public static void main(String[] args) throws Exception {
 |DAG模型|Map+Reduce模型|
 |常驻运行|反复启停|
 
-
+Storm：纯流式处理，处理数据单元是一个个Tuple。另外Storm针对流式处理设计，它的数据传输模式更为简单，很多地方也更为高效。并不是不能做批处理，它也可以用来做微批处理，来提高吞吐。<br>
+Spark Streaming：微批处理，一个批处理基于内存和DAG可以把处理任务做的很快，把RDD做的很小来处理接近流式处理。<br>
+|Storm | Spark Streaming|
+|------|----------------|
+|流式处理|微批处理|
+|毫秒级|秒级|
 
